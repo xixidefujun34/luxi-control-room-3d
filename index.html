@@ -1,0 +1,885 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>鲁西电厂集控室 - 3D效果图</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#1a1a2e;font-family:'Microsoft YaHei',sans-serif;overflow:hidden}
+#c{width:100vw;height:100vh;display:block}
+#ui{
+  position:fixed;top:20px;left:20px;background:rgba(0,0,0,0.82);color:#fff;
+  padding:15px 18px;border-radius:12px;z-index:10;font-size:13px;
+  backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,0.12);max-width:240px;
+  user-select:none;
+}
+#ui h2{font-size:16px;margin-bottom:10px;color:#4fc3f7;letter-spacing:2px}
+#ui .sec{margin-bottom:10px}
+#ui label{display:block;margin:2px 0;cursor:pointer;font-size:12px;color:#ddd}
+#ui input[type="radio"]{margin-right:6px;accent-color:#4fc3f7}
+#ui button{display:block;width:100%;margin:3px 0;padding:8px 10px;background:#1565c0;
+  color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:12px;transition:all .2s}
+#ui button:hover{background:#1e88e5}
+#ui button.on{background:#4fc3f7;color:#000;font-weight:bold}
+#info{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.7);
+  color:#aaa;padding:7px 16px;border-radius:20px;font-size:11px;z-index:10}
+#loadmsg{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);color:#fff;
+  font-size:18px;z-index:100;background:rgba(0,0,0,0.8);padding:20px 40px;border-radius:10px}
+</style>
+</head>
+<body>
+<div id="c"></div>
+<div id="loadmsg">正在加载3D场景...</div>
+<div id="ui">
+  <h2>鲁西电厂集控室</h2>
+  <div class="sec">
+    <b style="font-size:12px;color:#888;">大屏安装方式</b>
+    <label><input type="radio" name="st" value="curved" checked> 弧面安装</label>
+    <label><input type="radio" name="st" value="flat"> 平面安装</label>
+  </div>
+  <div class="sec">
+    <b style="font-size:12px;color:#888;">视角切换 (快捷键 1-7)</b>
+    <button onclick="setView('entrance')" id="b-entrance" class="on">入口视角</button>
+    <button onclick="setView('top')" id="b-top">全景俯视</button>
+    <button onclick="setView('north')" id="b-north">北侧大屏+坐席</button>
+    <button onclick="setView('south')" id="b-south">南侧大屏+坐席</button>
+    <button onclick="setView('west')" id="b-west">西侧双屏+过道</button>
+    <button onclick="setView('corner')" id="b-corner">智慧屏特写</button>
+    <button onclick="setView('corridor')" id="b-corridor">过道正视角</button>
+  </div>
+  <div class="sec">
+    <b style="font-size:12px;color:#888;">操作</b>
+    <button onclick="captureScreenshot()" style="background:#2e7d32;">导出截图 (PNG)</button>
+    <button onclick="toggleWireframe()" style="background:#555;">线框模式</button>
+  </div>
+</div>
+<div id="info">鼠标拖拽旋转 | 滚轮缩放 | 右键平移 | 点击左侧按钮切换视角</div>
+
+<script type="importmap">
+{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+document.getElementById('loadmsg').style.display = 'none';
+initScene();
+
+function initScene() {
+// ====================================================================
+// SCENE SETUP
+// 坐标系: X=0西 X=14东, Z=0北 Z=14南, Y=0地面 Y=3.5天花板
+// 房间14m×14m, 中部过道Z=5.5~8.5(宽3m, 东西走向)
+// ====================================================================
+var container = document.getElementById('c');
+var scene = new THREE.Scene();
+scene.background = new THREE.Color(0x1c1c2e);
+scene.fog = new THREE.Fog(0x1c1c2e, 30, 70);
+
+var camera = new THREE.PerspectiveCamera(50, container.clientWidth/container.clientHeight, 0.3, 90);
+camera.position.set(16, 7, 7);
+camera.lookAt(7, 1.5, 7);
+
+var renderer = new THREE.WebGLRenderer({antialias:true});
+renderer.setSize(container.clientWidth, container.clientHeight);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.1;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+container.appendChild(renderer.domElement);
+
+var controls = new OrbitControls(camera, renderer.domElement);
+controls.target.set(7, 1.5, 7);
+controls.enableDamping = true;
+controls.dampingFactor = 0.08;
+controls.minDistance = 2;
+controls.maxDistance = 35;
+controls.maxPolarAngle = Math.PI*0.55;
+controls.update();
+
+// ====================================================================
+// LIGHTING
+// ====================================================================
+scene.add(new THREE.AmbientLight(0x505070, 1.5));
+
+// Ceiling panel lights
+for (var x = 1.5; x <= 12.5; x += 3.7) {
+  for (var z = 1.5; z <= 12.5; z += 3.7) {
+    var ptLight = new THREE.PointLight(0xffeedd, 25, 12, 1.2);
+    ptLight.position.set(x, 3.35, z);
+    ptLight.castShadow = true;
+    ptLight.shadow.mapSize.set(512,512);
+    ptLight.shadow.camera.near = 0.1;
+    ptLight.shadow.camera.far = 20;
+    ptLight.shadow.bias = -0.0001;
+    scene.add(ptLight);
+
+    var fixGeo = new THREE.BoxGeometry(1.2, 0.02, 0.3);
+    var fixMat = new THREE.MeshStandardMaterial({color:0xfffff0, roughness:0.1, emissive:0xfffff0, emissiveIntensity:0.8});
+    var fix = new THREE.Mesh(fixGeo, fixMat);
+    fix.position.set(x, 3.48, z);
+    scene.add(fix);
+  }
+}
+
+// ====================================================================
+// MATERIALS
+// ====================================================================
+var M = {
+  floor: new THREE.MeshStandardMaterial({color:0x9aacad, roughness:0.35, metalness:0.08}),
+  corridor: new THREE.MeshStandardMaterial({color:0xbcc8c8, roughness:0.25, metalness:0.05}),
+  wall: new THREE.MeshStandardMaterial({color:0xececec, roughness:0.55, metalness:0.04}),
+  ceiling: new THREE.MeshStandardMaterial({color:0x2a2a35, roughness:0.7, metalness:0.1}),
+  frame: new THREE.MeshStandardMaterial({color:0x1a1a1a, roughness:0.2, metalness:0.85}),
+  screenSurf: new THREE.MeshStandardMaterial({color:0x03030f, roughness:0.05, metalness:0.4, emissive:0x000022, emissiveIntensity:0.6}),
+  glassWall: new THREE.MeshPhysicalMaterial({color:0xccddff, roughness:0.05, metalness:0.05, transparent:true, opacity:0.22}),
+  glassWin: new THREE.MeshPhysicalMaterial({color:0xddeeff, roughness:0.03, metalness:0.03, transparent:true, opacity:0.35}),
+  steel: new THREE.MeshStandardMaterial({color:0x3a3a3a, roughness:0.25, metalness:0.9}),
+  desk: new THREE.MeshStandardMaterial({color:0x2c3e40, roughness:0.35, metalness:0.25}),
+  chair: new THREE.MeshStandardMaterial({color:0x1a2528, roughness:0.45, metalness:0.15}),
+  ideaHub: new THREE.MeshStandardMaterial({color:0x181818, roughness:0.15, metalness:0.6}),
+  ideaHubScr: new THREE.MeshStandardMaterial({color:0x050510, roughness:0.08, metalness:0.3, emissive:0x000018, emissiveIntensity:0.5}),
+  sill: new THREE.MeshStandardMaterial({color:0xdddddd, roughness:0.18, metalness:0.5}),
+  doorFrame: new THREE.MeshStandardMaterial({color:0x222222, roughness:0.15, metalness:0.9}),
+  doorGlass: new THREE.MeshPhysicalMaterial({color:0xffffff, roughness:0.04, metalness:0.08, transparent:true, opacity:0.45}),
+  yellowLine: new THREE.MeshStandardMaterial({color:0xffc107, roughness:0.2, emissive:0xffc107, emissiveIntensity:0.25}),
+  cornerMark: new THREE.MeshBasicMaterial({color:0x4fc3f7, transparent:true, opacity:0.5})
+};
+
+// ====================================================================
+// HELPER - creates a box mesh. Optional x,y,z,ry for positioning.
+// ====================================================================
+function box(w, h, d, mat, x, y, z, ry) {
+  var m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+  if (x !== undefined) m.position.set(x, y, z);
+  if (ry !== undefined) m.rotation.y = ry;
+  return m;
+}
+
+// Helper: create, position, optionally rotate-Y, add to parent, return mesh
+function addBox(parent, w, h, d, mat, x, y, z, ry) {
+  var m = box(w, h, d, mat, x, y, z, ry);
+  parent.add(m);
+  return m;
+}
+function addMesh(parent, geo, mat, x, y, z, ry) {
+  var m = new THREE.Mesh(geo, mat);
+  m.position.set(x, y, z);
+  if (ry !== undefined) m.rotation.y = ry;
+  parent.add(m);
+  return m;
+}
+
+// ====================================================================
+// FLOOR
+// ====================================================================
+var fl = new THREE.Mesh(new THREE.PlaneGeometry(14,14), M.floor);
+fl.rotation.x = -Math.PI/2; fl.position.set(7,0.005,7); fl.receiveShadow = true;
+scene.add(fl);
+
+// Anti-static floor grid lines removed
+
+// 中部过道地面 (Z=5.5~8.5, 宽3m, 东西走向)
+var corr = new THREE.Mesh(new THREE.PlaneGeometry(14, 3), M.corridor);
+corr.rotation.x = -Math.PI/2; corr.position.set(7, 0.012, 7); corr.receiveShadow = true;
+scene.add(corr);
+addBox(scene, 14, 0.008, 0.04, M.yellowLine, 7, 0.018, 5.5);
+addBox(scene, 14, 0.008, 0.04, M.yellowLine, 7, 0.018, 8.5);
+
+// ====================================================================
+// CEILING
+// ====================================================================
+var ceiling = new THREE.Mesh(new THREE.PlaneGeometry(14,14), M.ceiling);
+ceiling.rotation.x = Math.PI/2; ceiling.position.set(7, 3.5, 7);
+scene.add(ceiling);
+
+// ====================================================================
+// WALLS (坐标系: X=0西 X=14东, Z=0北 Z=14南)
+// ====================================================================
+// 北墙 Z=0
+var nWall = new THREE.Mesh(new THREE.PlaneGeometry(14, 3.5), M.wall);
+nWall.position.set(7, 1.75, 0.01); scene.add(nWall);
+// 南墙 Z=14 (玻璃幕墙/进户门)
+var sWall = new THREE.Mesh(new THREE.PlaneGeometry(14, 3.5), M.wall);
+sWall.position.set(7, 1.75, 13.99); sWall.rotation.y = Math.PI; scene.add(sWall);
+// 西墙 X=0
+var wWall = new THREE.Mesh(new THREE.PlaneGeometry(14, 3.5), M.wall);
+wWall.rotation.y = Math.PI/2; wWall.position.set(0.01, 1.75, 7); scene.add(wWall);
+
+// ====================================================================
+// WINDOWS (北墙+南墙转角窗户)
+// ====================================================================
+var winCX = [1.0, 12.5];
+function makeWindow(cx, zVal) {
+  var g = new THREE.Group();
+  var zOut = zVal + (zVal<1?0.03:-0.03); // 窗框向外突出
+  var fw = 0.06; // 窗框宽度
+  // 窗洞深色背景（模拟玻璃后面的深度）
+  var recessMat = new THREE.MeshStandardMaterial({color:0x1a1a22, roughness:0.9});
+  addMesh(g, new THREE.PlaneGeometry(1.9, 1.9), recessMat, cx, 1.9, zVal);
+  // 玻璃（带蓝色调的半透明）
+  var glassMat = new THREE.MeshPhysicalMaterial({color:0xccddff, roughness:0.02, metalness:0.05, transparent:true, opacity:0.25, clearcoat:0.1});
+  addMesh(g, new THREE.PlaneGeometry(1.9, 1.9), glassMat, cx, 1.9, zOut);
+  // 上横框
+  addBox(g, 2+fw*2, fw, 0.1, M.steel, cx, 2.92, zOut);
+  // 下横框
+  addBox(g, 2+fw*2, fw, 0.1, M.steel, cx, 0.88, zOut);
+  // 左竖框
+  addBox(g, fw, 2.04, 0.1, M.steel, cx-1, 1.9, zOut);
+  // 右竖框
+  addBox(g, fw, 2.04, 0.1, M.steel, cx+1, 1.9, zOut);
+  // 窗台
+  addBox(g, 2.12, 0.03, 0.14, M.sill, cx, 0.86, zOut + (zVal<1?0.04:-0.04));
+  return g;
+}
+winCX.forEach(function(cx) { scene.add(makeWindow(cx, 0.02)); scene.add(makeWindow(cx, 13.98)); });
+
+// ====================================================================
+// 南侧玻璃幕墙 (Z=14, 含进户门)
+// ====================================================================
+function makeSouthGlassWall() {
+  var g = new THREE.Group();
+  var panels = 7, pw = 14/panels;
+  for (var i = 0; i < panels; i++) {
+    var gl = new THREE.Mesh(new THREE.PlaneGeometry(pw-0.06, 3.45), M.glassWall);
+    gl.position.set(pw/2 + i*pw, 1.75, 14); gl.rotation.y = Math.PI; g.add(gl);
+  }
+  addBox(g, 14, 0.06, 0.1, M.steel, 7, 3.47, 13.97);
+  addBox(g, 14, 0.06, 0.1, M.steel, 7, 0.03, 13.97);
+  addBox(g, 14, 0.06, 0.15, M.steel, 7, 0.03, 13.92);
+  return g;
+}
+scene.add(makeSouthGlassWall());
+
+// ====================================================================
+// 南侧进户门 (双开玻璃门, 位于南墙 Z≈14 中间位置)
+// ====================================================================
+var doorGrp = new THREE.Group();
+var dw = 1.1, dh = 2.5, dz = 13.92;
+var d1 = new THREE.Mesh(new THREE.PlaneGeometry(dw, dh), M.doorGlass);
+d1.position.set(7-dw/2, dh/2, dz); d1.rotation.y = Math.PI; doorGrp.add(d1);
+var d2 = new THREE.Mesh(new THREE.PlaneGeometry(dw, dh), M.doorGlass);
+d2.position.set(7+dw/2, dh/2, dz); d2.rotation.y = Math.PI; doorGrp.add(d2);
+var ff = 0.05;
+addBox(doorGrp, 2*dw+ff*2, ff, 0.1, M.doorFrame, 7, dh, dz);
+addBox(doorGrp, ff, dh, 0.1, M.doorFrame, 7-dw-ff/2, dh/2, dz);
+addBox(doorGrp, ff, dh, 0.1, M.doorFrame, 7+dw+ff/2, dh/2, dz);
+addBox(doorGrp, ff, dh, 0.1, M.doorFrame, 7, dh/2, dz);
+var hGeo = new THREE.CylinderGeometry(0.025, 0.025, 0.35, 8);
+var hMat = new THREE.MeshStandardMaterial({color:0xcccccc, roughness:0.08, metalness:0.95});
+addMesh(doorGrp, hGeo, hMat, 7-dw+0.15, 1.15, dz-0.04);
+addMesh(doorGrp, hGeo, hMat, 7+dw-0.15, 1.15, dz-0.04);
+scene.add(doorGrp);
+
+// ====================================================================
+// LOAD SCREEN TEXTURES FROM IMAGE FILES
+// ====================================================================
+var loader = new THREE.TextureLoader();
+var texLarge = loader.load(encodeURI('大.png'));
+var texSmall = loader.load(encodeURI('小.jpg'));
+var texFlat = loader.load(encodeURI('大平.jpg'));
+texLarge.colorSpace = THREE.SRGBColorSpace;
+texSmall.colorSpace = THREE.SRGBColorSpace;
+texFlat.colorSpace = THREE.SRGBColorSpace;
+// Curved mode materials (self-illuminated,不受灯光影响)
+var scrThermalMat = new THREE.MeshBasicMaterial({map: texLarge});
+var scrWindMat = new THREE.MeshBasicMaterial({map: texLarge});
+var scrVideoMat = new THREE.MeshBasicMaterial({map: texSmall});
+// Flat mode materials
+var scrFlatLarge = new THREE.MeshBasicMaterial({map: texFlat});
+var scrFlatSmall = new THREE.MeshBasicMaterial({map: texSmall});
+// ====================================================================
+// 北屏(nScreenGrp), 南屏(sScreenGrp), 西屏(wnScreenGrp/wsScreenGrp)
+var nScreenGrp = new THREE.Group(); var sScreenGrp = new THREE.Group();
+var wnScreenGrp = new THREE.Group(); var wsScreenGrp = new THREE.Group();
+scene.add(nScreenGrp); scene.add(sScreenGrp);
+scene.add(wnScreenGrp); scene.add(wsScreenGrp);
+
+// ====================================================================
+// FLAT SCREEN
+// ====================================================================
+function createFlatScreen(w, h, bY, scrMat) {
+  var g = new THREE.Group();
+  var depth = 0.5; // 50cm 屏体厚度
+
+  // Screen back body
+  addBox(g, w, h, depth, M.frame, 0, bY+h/2, -depth/2);
+
+  // Side panels to show depth clearly
+  addBox(g, 0.03, h, depth, M.steel, -w/2-0.015, bY+h/2, -depth/2);
+  addBox(g, 0.03, h, depth, M.steel, w/2+0.015, bY+h/2, -depth/2);
+
+  // Top and bottom depth panels
+  addBox(g, w+0.06, 0.03, depth, M.steel, 0, bY+h+0.015, -depth/2);
+  addBox(g, w+0.06, 0.03, depth, M.steel, 0, bY-0.015, -depth/2);
+
+  // Screen surface with content
+  var surfGeo = new THREE.PlaneGeometry(w, h);
+  var surf = new THREE.Mesh(surfGeo, scrMat || M.screenSurf);
+  surf.position.set(0, bY+h/2, 0.005);
+  g.add(surf);
+
+  // Frame (thin bezel)
+  var fw = 0.04;
+  addBox(g, w+fw*2, fw, 0.06, M.frame, 0, bY+h, 0.03);
+  addBox(g, w+fw*2, fw, 0.06, M.frame, 0, bY, 0.03);
+  addBox(g, fw, h, 0.06, M.frame, -w/2, bY+h/2, 0.03);
+  addBox(g, fw, h, 0.06, M.frame, w/2, bY+h/2, 0.03);
+  return g;
+}
+
+// ====================================================================
+// CURVED SCREEN
+// ====================================================================
+function createCurvedScreen(w, h, bY, R, scrMat) {
+  var g = new THREE.Group();
+  var segs = 80;
+  var halfA = w/(2*R);
+  var segMat = new THREE.MeshBasicMaterial({color:0x03030f});
+  var depth = 0.5; // 50cm
+
+  // Screen segments with depth
+  for (var i = 0; i < segs; i++) {
+    var a1 = -halfA + i*(2*halfA/segs), a2 = a1 + (2*halfA/segs), midA = (a1+a2)/2;
+    var segW = R * (Math.sin(a2) - Math.sin(a1));
+    // Back body
+    var backBox = box(Math.abs(segW), h, depth, M.frame);
+    backBox.position.set(R*Math.sin(midA), bY+h/2, R*(1-Math.cos(midA))-depth/2);
+    backBox.rotation.y = -midA;
+    g.add(backBox);
+    // Front surface with content (adjust UVs to span texture across all segments)
+    var surfGeo = new THREE.PlaneGeometry(Math.abs(segW), h);
+    var uvs = surfGeo.attributes.uv;
+    for (var vi = 0; vi < uvs.count; vi++) {
+      uvs.setXY(vi, uvs.getX(vi) / segs + i / segs, uvs.getY(vi));
+    }
+    var surf = new THREE.Mesh(surfGeo, scrMat || segMat);
+    surf.position.set(R*Math.sin(midA), bY+h/2, R*(1-Math.cos(midA))+0.005);
+    surf.rotation.y = -midA;
+    g.add(surf);
+  }
+
+  // Frame (bezel)
+  var fH = 0.04;
+  for (var j2 = 0; j2 < segs; j2++) {
+    var aa1 = -halfA + j2*(2*halfA/segs), aa2 = aa1 + (2*halfA/segs), ma = (aa1+aa2)/2;
+    var segLen = R * (aa2 - aa1);
+    addBox(g, segLen, fH, depth+0.02, M.frame, R*Math.sin(ma), bY, R*(1-Math.cos(ma))-depth/2, -ma);
+    addBox(g, segLen, fH, depth+0.02, M.frame, R*Math.sin(ma), bY+h, R*(1-Math.cos(ma))-depth/2, -ma);
+  }
+  for (var sgn = 0; sgn < 2; sgn++) {
+    var endA = (sgn===0?-1:1) * halfA;
+    for (var k = 0; k < 20; k++) {
+      var fy = bY + (k+0.5)*h/20;
+      addBox(g, 0.04, h/20, depth+0.02, M.frame, R*Math.sin(endA), fy, R*(1-Math.cos(endA))-depth/2, -endA);
+    }
+  }
+  return g;
+}
+
+var scrType = 'curved';
+function buildAllScreens(type) {
+  [nScreenGrp, sScreenGrp, wnScreenGrp, wsScreenGrp].forEach(function(grp) {
+    while(grp.children.length > 0) grp.remove(grp.children[0]);
+  });
+  var SW=8.4, SH=2.025, bY=0.7, WSW=4.2, cR=100;
+
+  // Helper: create cabinet below screen (50cm depth, metallic)
+  function addCabinet(parent, w, h, x, z, ry) {
+    var cabMat = new THREE.MeshStandardMaterial({color:0x9a9aa5, roughness:0.2, metalness:0.85});
+    var trimMat = new THREE.MeshStandardMaterial({color:0xb0b0b8, roughness:0.12, metalness:0.9});
+    // Main cabinet body (0.5m depth, same as screen)
+    var cab = box(w, h, 0.5, cabMat);
+    cab.position.set(x, h/2, z); if (ry) cab.rotation.y = ry;
+    parent.add(cab);
+    // Top trim
+    var trim = box(w+0.02, 0.02, 0.5, trimMat);
+    trim.position.set(x, h, z); if (ry) trim.rotation.y = ry;
+    parent.add(trim);
+    // Bottom trim
+    var btrim = box(w+0.02, 0.02, 0.5, trimMat);
+    btrim.position.set(x, 0.02, z); if (ry) btrim.rotation.y = ry;
+    parent.add(btrim);
+  }
+
+  if (type==='curved') {
+    var ns=createCurvedScreen(SW,SH,bY,cR,scrThermalMat); ns.position.set(7,0,0.5); nScreenGrp.add(ns);
+    addCabinet(nScreenGrp, SW, bY, 7, 0.3, 0); // 北屏下方柜子
+    var ss=createCurvedScreen(SW,SH,bY,cR,scrWindMat); ss.position.set(7,0,13.5); ss.rotation.y=Math.PI; sScreenGrp.add(ss);
+    addCabinet(sScreenGrp, SW, bY, 7, 13.7, Math.PI); // 南屏下方柜子
+    var wns=createCurvedScreen(WSW,SH,bY,cR,scrVideoMat); wns.position.set(0.06,0,3.8); wns.rotation.y=Math.PI/2; wnScreenGrp.add(wns);
+    var wss=createCurvedScreen(WSW,SH,bY,cR,scrVideoMat); wss.position.set(0.06,0,10.2); wss.rotation.y=Math.PI/2; wsScreenGrp.add(wss);
+  } else {
+    var fns=createFlatScreen(SW,SH,bY,scrFlatLarge); fns.position.set(7,0,0.5); nScreenGrp.add(fns);
+    addCabinet(nScreenGrp, SW, bY, 7, 0.3, 0);
+    var fss=createFlatScreen(SW,SH,bY,scrFlatLarge); fss.position.set(7,0,13.5); fss.rotation.y=Math.PI; sScreenGrp.add(fss);
+    addCabinet(sScreenGrp, SW, bY, 7, 13.7, Math.PI);
+    var fwns=createFlatScreen(WSW,SH,bY,scrFlatSmall); fwns.position.set(0.06,0,3.8); fwns.rotation.y=Math.PI/2; wnScreenGrp.add(fwns);
+    var fwss=createFlatScreen(WSW,SH,bY,scrFlatSmall); fwss.position.set(0.06,0,10.2); fwss.rotation.y=Math.PI/2; wsScreenGrp.add(fwss);
+  }
+}
+buildAllScreens('curved');
+
+// Status lights on screens
+function statusLight(x,y,z){var l=new THREE.Mesh(new THREE.SphereGeometry(0.035,8,8),
+  new THREE.MeshStandardMaterial({color:0x00ff88,roughness:0.1,emissive:0x00ff88,emissiveIntensity:2}));
+  l.position.set(x,y,z); return l;}
+nScreenGrp.add(statusLight(7,2.85,0.54)); sScreenGrp.add(statusLight(7,2.85,13.46));
+
+// ====================================================================
+// HUAWEI IDEAHUB PRO 86 (西北角+西南角各1台)
+// ====================================================================
+function makeIdeaHub(x, z, ry) {
+  var g = new THREE.Group();
+  var scrW = 1.92, scrH = 1.08; // 192cm × 108cm (16:9)
+  var standH = 1.0; // 支架高度100cm
+  var scrBottom = standH; // 屏幕底部距地面1.0m
+  var scrCenterY = scrBottom + scrH/2; // 屏幕中心Y = 1.0+0.54 = 1.54
+  // Screen body
+  addBox(g, scrW, scrH, 0.05, M.ideaHub, 0, scrCenterY, 0);
+  // Display surface (slightly smaller, inset)
+  addMesh(g, new THREE.PlaneGeometry(1.90, 1.07), M.ideaHubScr, 0.03, scrCenterY, 0);
+  // Stand (cylinder, height = 0.96m from base to screen bottom)
+  addMesh(g, new THREE.CylinderGeometry(0.04, 0.06, standH-0.04, 12),
+    new THREE.MeshStandardMaterial({color:0x444444, roughness:0.2, metalness:0.8}), 0, standH/2+0.02, 0);
+  // Base plate
+  addBox(g, 0.85, 0.04, 0.55, M.steel, 0, 0.02, 0);
+  // Casters
+  for (var dx=-1;dx<=1;dx+=2)
+    for (var dz2=-1;dz2<=1;dz2+=2) {
+      var wh = new THREE.Mesh(new THREE.CylinderGeometry(0.04,0.04,0.03,8),
+        new THREE.MeshStandardMaterial({color:0x333333, roughness:0.5}));
+      wh.position.set(dx*0.32, 0.015, dz2*0.2); wh.rotation.x=Math.PI/2; g.add(wh);
+    }
+  // Status LED at top
+  addMesh(g, new THREE.SphereGeometry(0.025,8,8),
+    new THREE.MeshStandardMaterial({color:0xff0000,roughness:0.08,emissive:0xff0000,emissiveIntensity:1.2}),
+    0, scrBottom+scrH+0.03, 0.03);
+  g.position.set(x,0,z); g.rotation.y=ry; return g;
+}
+scene.add(makeIdeaHub(1.2, 1.2, Math.PI/4)); // 西北角
+scene.add(makeIdeaHub(1.2, 12.8, 3*Math.PI/4)); // 西南角
+
+// ====================================================================
+// 支撑柱 (40cm×40cm, 过道两侧X=7处)
+// ====================================================================
+function makePillar(px, pz) {
+  var g = new THREE.Group();
+  var pillarMat = new THREE.MeshStandardMaterial({color:0xd5d5d8, roughness:0.3, metalness:0.1});
+  var pW = 0.4, pH = 3.5;
+  var pillar = new THREE.Mesh(new THREE.BoxGeometry(pW, pH, pW), pillarMat);
+  pillar.position.set(px, pH/2, pz);
+  pillar.castShadow = true;
+  pillar.receiveShadow = true;
+  g.add(pillar);
+  // Base trim
+  var baseMat = new THREE.MeshStandardMaterial({color:0x3a3a3a, roughness:0.25, metalness:0.5});
+  addBox(g, 0.5, 0.08, 0.5, baseMat, px, 0.04, pz);
+  // Top trim
+  addBox(g, 0.5, 0.06, 0.5, baseMat, px, 3.47, pz);
+  return g;
+}
+scene.add(makePillar(7, 5.5));
+scene.add(makePillar(7, 8.5));
+
+// ====================================================================
+// KVM操作员坐席 (北侧8位Z=5.52 + 南侧8位Z=8.48)
+// ====================================================================
+function makeStation() {
+  var g = new THREE.Group();
+  addBox(g, 1.15, 0.035, 0.72, M.desk, 0, 0.75, 0);
+  addBox(g, 0.035, 0.73, 0.035, M.steel, 0.5, 0.37, 0.3);
+  addBox(g, 0.035, 0.73, 0.035, M.steel, -0.5, 0.37, 0.3);
+  addBox(g, 0.035, 0.73, 0.035, M.steel, 0.5, 0.37, -0.3);
+  addBox(g, 0.035, 0.73, 0.035, M.steel, -0.5, 0.37, -0.3);
+  var monMat = new THREE.MeshStandardMaterial({color:0x0a0a20, roughness:0.15, emissive:0x000015, emissiveIntensity:0.4});
+  addBox(g, 0.45, 0.28, 0.035, monMat, 0.24, 0.95, 0.28);
+  addBox(g, 0.45, 0.28, 0.035, monMat, -0.24, 0.95, 0.28);
+  addMesh(g, new THREE.CylinderGeometry(0.018, 0.018, 0.13, 6), M.steel, 0.24, 0.82, 0.28);
+  addMesh(g, new THREE.CylinderGeometry(0.018, 0.018, 0.13, 6), M.steel, -0.24, 0.82, 0.28);
+  addMesh(g, new THREE.CylinderGeometry(0.22, 0.24, 0.05, 20), M.chair, 0, 0.47, -0.24);
+  addBox(g, 0.38, 0.42, 0.04, M.chair, 0, 0.72, -0.35);
+  addMesh(g, new THREE.CylinderGeometry(0.028, 0.028, 0.32, 8), M.steel, 0, 0.54, -0.24);
+  return g;
+}
+
+// 北侧坐席(过道北) Z=5.52 (4西+4东, 中间X=7为柱子留空)
+var nRow = new THREE.Group();
+var seatGap = 1.15;
+var nLX = [2.5, 3.65, 4.8, 5.95]; // 西侧组 X<6.8
+var nRX = [8.05, 9.2, 10.35, 11.5]; // 东侧组 X>7.2
+nLX.forEach(function(sx){ var st=makeStation(); st.position.set(sx,0,5.52); st.rotation.y=Math.PI; nRow.add(st); });
+nRX.forEach(function(sx){ var st=makeStation(); st.position.set(sx,0,5.52); st.rotation.y=Math.PI; nRow.add(st); });
+scene.add(nRow);
+// 南侧坐席(过道南) Z=8.48 (4西+4东)
+var sRow = new THREE.Group();
+nLX.forEach(function(sx){ var st=makeStation(); st.position.set(sx,0,8.48); sRow.add(st); });
+nRX.forEach(function(sx){ var st=makeStation(); st.position.set(sx,0,8.48); sRow.add(st); });
+scene.add(sRow);
+
+// ====================================================================
+// REST AREAS (靠东墙X=14, 南北各一个休息区)
+// ====================================================================
+function makeSofa(len) {
+  var g = new THREE.Group();
+  var seatW = len || 2.0, seatH = 0.38, seatD = 0.78;
+  var fabric = new THREE.MeshStandardMaterial({color:0x4a4a58, roughness:0.7, metalness:0.03});
+  var arm = new THREE.MeshStandardMaterial({color:0x33333a, roughness:0.4, metalness:0.15});
+  var leg = new THREE.MeshStandardMaterial({color:0x2a2a2a, roughness:0.18, metalness:0.92});
+  // Seat cushion
+  addBox(g, seatW, seatH, seatD, fabric, 0, seatH/2, 0);
+  // Backrest
+  addBox(g, seatW, seatH*1.05, 0.13, fabric, 0, seatH+seatH*1.05/2, -seatD/2+0.065);
+  // Armrests
+  for (var sx=-1; sx<=1; sx+=2)
+    addBox(g, 0.1, seatH*0.8, seatD, arm, sx*(seatW/2-0.05), seatH*0.8/2, 0);
+  // Metal legs
+  for (var lx=-1; lx<=1; lx+=2)
+    for (var lz=-1; lz<=1; lz+=2)
+      addMesh(g, new THREE.CylinderGeometry(0.022,0.025,0.1,8), leg, lx*(seatW/2-0.13), 0.05, lz*(seatD/2-0.09));
+  // Cushion accents
+  var cus = new THREE.MeshStandardMaterial({color:0x5a6a7a, roughness:0.55, metalness:0.05});
+  addBox(g, 0.5, 0.07, 0.5, cus, -0.55, seatH+0.015, seatD/2-0.26);
+  addBox(g, 0.5, 0.07, 0.5, cus, 0.55, seatH+0.015, seatD/2-0.26);
+  return g;
+}
+function makeArmchair() {
+  var g = new THREE.Group();
+  var fabric = new THREE.MeshStandardMaterial({color:0x5a5a68, roughness:0.7, metalness:0.03});
+  var leg = new THREE.MeshStandardMaterial({color:0x2a2a2a, roughness:0.18, metalness:0.92});
+  addBox(g, 0.65, 0.34, 0.7, fabric, 0, 0.17, 0);
+  addBox(g, 0.65, 0.42, 0.11, fabric, 0, 0.34+0.21, -0.295);
+  for (var sx=-1; sx<=1; sx+=2)
+    addBox(g, 0.07, 0.24, 0.7, new THREE.MeshStandardMaterial({color:0x33333a,roughness:0.4,metalness:0.15}), sx*(0.325-0.035), 0.12, 0);
+  for (var lx=-1; lx<=1; lx+=2)
+    for (var lz=-1; lz<=1; lz+=2)
+      addMesh(g, new THREE.CylinderGeometry(0.02,0.022,0.09,8), leg, lx*0.2, 0.045, lz*0.24);
+  return g;
+}
+function makeCoffeeTable() {
+  var g = new THREE.Group();
+  var tw=1.1, td=0.55, th=0.4;
+  var top = new THREE.MeshStandardMaterial({color:0x7a6a5a, roughness:0.25, metalness:0.08});
+  var leg = new THREE.MeshStandardMaterial({color:0x2a2a2a, roughness:0.2, metalness:0.9});
+  addBox(g, tw, 0.04, td, top, 0, th, 0);
+  addBox(g, tw-0.12, 0.03, td-0.12, leg, 0, th-0.035, 0);
+  for (var lx=-1; lx<=1; lx+=2)
+    for (var lz=-1; lz<=1; lz+=2)
+      addMesh(g, new THREE.CylinderGeometry(0.025,0.028,th-0.02,8), leg, lx*(tw/2-0.12), (th-0.02)/2, lz*(td/2-0.08));
+  return g;
+}
+function makeSideTable(x, z) {
+  var g = new THREE.Group();
+  var top = new THREE.MeshStandardMaterial({color:0x4a4a4a, roughness:0.2, metalness:0.7});
+  addBox(g, 0.4, 0.03, 0.4, top, 0, 0.48, 0);
+  addMesh(g, new THREE.CylinderGeometry(0.03,0.04,0.46,8), new THREE.MeshStandardMaterial({color:0x333333,roughness:0.15,metalness:0.9}), 0, 0.23, 0);
+  addBox(g, 0.35, 0.02, 0.35, new THREE.MeshStandardMaterial({color:0x3a3a3a,roughness:0.2,metalness:0.9}), 0, 0.02, 0);
+  g.position.set(x, 0, z);
+  return g;
+}
+
+// 北侧休息区 (东北角, 背贴东墙X=14, 靠北)
+var northRest = new THREE.Group();
+var nsSofa = makeSofa(2.1);
+nsSofa.position.set(13.61, 0, 2.0); nsSofa.rotation.y = -Math.PI/2; // 背贴东墙, 朝西
+northRest.add(nsSofa);
+var nsChair1 = makeArmchair();
+nsChair1.position.set(12.1, 0, 1.3); nsChair1.rotation.y = Math.PI/2; // 朝东面朝沙发
+northRest.add(nsChair1);
+var nsChair2 = makeArmchair();
+nsChair2.position.set(12.1, 0, 2.7); nsChair2.rotation.y = Math.PI/2;
+northRest.add(nsChair2);
+var nsTable = makeCoffeeTable();
+nsTable.position.set(12.9, 0, 2.0); nsTable.rotation.y = Math.PI/2;
+northRest.add(nsTable);
+northRest.add(makeSideTable(12.6, 0.8));
+scene.add(northRest);
+
+// 南侧休息区 (东南角, 背贴东墙X=14, 靠南)
+var southRest = new THREE.Group();
+var ssSofa = makeSofa(2.1);
+ssSofa.position.set(13.61, 0, 12.0); ssSofa.rotation.y = -Math.PI/2; // 背贴东墙, 朝西
+southRest.add(ssSofa);
+var ssChair1 = makeArmchair();
+ssChair1.position.set(12.1, 0, 11.3); ssChair1.rotation.y = Math.PI/2; // 朝东面朝沙发
+southRest.add(ssChair1);
+var ssChair2 = makeArmchair();
+ssChair2.position.set(12.1, 0, 12.7); ssChair2.rotation.y = Math.PI/2;
+southRest.add(ssChair2);
+var ssTable = makeCoffeeTable();
+ssTable.position.set(12.9, 0, 12.0); ssTable.rotation.y = Math.PI/2;
+southRest.add(ssTable);
+southRest.add(makeSideTable(12.6, 13.0));
+scene.add(southRest);
+
+// ====================================================================
+// DIRECTION LABELS (方位标注)
+// 坐标系: X=0西 X=14东, Z=0北 Z=14南
+// ====================================================================
+function makeDirLabel(text, x, z, rotZ) {
+  var canvas = document.createElement('canvas');
+  canvas.width = 256; canvas.height = 256;
+  var ctx = canvas.getContext('2d');
+  ctx.fillStyle = 'rgba(0,0,0,0.55)';
+  ctx.beginPath(); ctx.arc(128, 128, 110, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = 'rgba(255,255,255,0.95)';
+  ctx.font = 'bold 100px "Microsoft YaHei","SimHei",sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(text, 128, 128);
+  ctx.fillStyle = 'rgba(79,195,247,0.9)';
+  ctx.beginPath();
+  ctx.moveTo(128, 200); ctx.lineTo(98, 140); ctx.lineTo(158, 140);
+  ctx.fill();
+
+  var tex = new THREE.CanvasTexture(canvas);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  var geo = new THREE.PlaneGeometry(2.0, 2.0);
+  var mat = new THREE.MeshBasicMaterial({map: tex, transparent: true, depthTest: false, side: THREE.DoubleSide});
+  var mesh = new THREE.Mesh(geo, mat);
+  mesh.rotation.x = -Math.PI/2;
+  mesh.position.set(x, 0.04, z);
+  mesh.rotation.z = rotZ || 0;
+  return mesh;
+}
+// 北 — 墙外 Z=-0.8, 箭头指向南(+Z)
+scene.add(makeDirLabel('北', 7, -0.8, 0));
+// 南 — 墙外 Z=14.8, 箭头指向北(-Z)
+scene.add(makeDirLabel('南', 7, 14.8, Math.PI));
+// 西 — 墙外 X=-0.8, 箭头指向东(+X)
+scene.add(makeDirLabel('西', -0.8, 7, Math.PI/2));
+// 东 — 墙外 X=14.8, 箭头指向西(-X)
+scene.add(makeDirLabel('东', 14.8, 7, -Math.PI/2));
+
+// ====================================================================
+// CORNER MARKERS (四角地面标记)
+// ====================================================================
+function cornerMark(cx, cz) {
+  var g = new THREE.Group();
+  addBox(g, 0.3, 0.01, 0.03, M.cornerMark, cx+(cx<7?0.15:-0.15), 0.015, cz);
+  addBox(g, 0.03, 0.01, 0.3, M.cornerMark, cx, 0.015, cz+(cz<7?0.15:-0.15));
+  return g;
+}
+scene.add(cornerMark(0, 0));
+scene.add(cornerMark(14, 0));
+scene.add(cornerMark(0, 14));
+scene.add(cornerMark(14, 14));
+
+// ====================================================================
+// SKIRTING
+// ====================================================================
+function skirting(x, y, z, ry, len) {
+  var s = box(len, 0.1, 0.025, new THREE.MeshStandardMaterial({color:0x2a2a2a, roughness:0.3, metalness:0.5}));
+  s.position.set(x, y, z);
+  if (ry) s.rotation.y = ry;
+  return s;
+}
+scene.add(skirting(0.02, 0.05, 7, Math.PI/2, 14));
+scene.add(skirting(1.4, 0.05, 0.02, 0, 2.8));
+scene.add(skirting(9.8, 0.05, 0.02, 0, 2.8));
+scene.add(skirting(1.4, 0.05, 13.98, 0, 2.8));
+scene.add(skirting(9.8, 0.05, 13.98, 0, 2.8));
+scene.add(skirting(7, 0.05, 13.98, 0, 14));
+
+// ====================================================================
+// 过道顶部管线/风道 + 去工业化灯效
+// ====================================================================
+var ductGroup = new THREE.Group();
+
+// Continuous duct: 3m wide (corridor width) × 14m long × 0.25m thick, east-west
+var ductMat = new THREE.MeshStandardMaterial({color:0x5a5a65, roughness:0.35, metalness:0.5});
+var duct = new THREE.Mesh(new THREE.BoxGeometry(14, 0.25, 3), ductMat);
+duct.position.set(7, 3.375, 7);
+duct.castShadow = true;
+duct.receiveShadow = true;
+ductGroup.add(duct);
+
+// Duct bottom accent panel (slightly recessed, darker)
+var accentMat = new THREE.MeshStandardMaterial({color:0x3a3a45, roughness:0.3, metalness:0.6});
+var accent = new THREE.Mesh(new THREE.BoxGeometry(13.8, 0.02, 2.8), accentMat);
+accent.position.set(7, 3.255, 7);
+ductGroup.add(accent);
+
+// Horizontal seam lines along the duct (east-west grooves)
+var seamMat = new THREE.MeshStandardMaterial({color:0x4a4a55, roughness:0.25, metalness:0.7});
+for (var sx = 1; sx < 14; sx += 2.5) {
+  var seam = new THREE.Mesh(new THREE.BoxGeometry(0.015, 0.27, 3.02), seamMat);
+  seam.position.set(sx, 3.375, 7);
+  ductGroup.add(seam);
+}
+
+// Vertical trim lines along duct length
+for (var sz = 5.6; sz <= 8.4; sz += 0.7) {
+  var vSeam = new THREE.Mesh(new THREE.BoxGeometry(14, 0.27, 0.015), seamMat);
+  vSeam.position.set(7, 3.375, sz);
+  ductGroup.add(vSeam);
+}
+
+// Support brackets at duct sides (every 2m)
+var bracketMat = new THREE.MeshStandardMaterial({color:0x6a6a70, roughness:0.2, metalness:0.8});
+for (var bx = 1; bx < 14; bx += 2) {
+  for (var bz of [5.55, 8.45]) {
+    var bracket = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.06, 0.06), bracketMat);
+    bracket.position.set(bx, 3.47, bz);
+    ductGroup.add(bracket);
+  }
+}
+
+scene.add(ductGroup);
+
+// LED accent lighting strips - "去工业化" 灯效
+var ledGroup = new THREE.Group();
+function addLEDStrip(x1, z1, x2, z2, y, color) {
+  var dx = x2-x1, dz = z2-z1;
+  var len = Math.sqrt(dx*dx + dz*dz);
+  var angle = Math.atan2(dz, dx);
+  var strip = new THREE.Mesh(new THREE.BoxGeometry(len, 0.015, 0.03),
+    new THREE.MeshStandardMaterial({color:color, roughness:0.1, emissive:color, emissiveIntensity:1.5}));
+  strip.position.set((x1+x2)/2, y, (z1+z2)/2);
+  strip.rotation.y = angle;
+  ledGroup.add(strip);
+}
+
+// Blue LED strips along corridor edges on duct bottom
+addLEDStrip(0.2, 5.55, 13.8, 5.55, 3.23, 0x4488ff);
+addLEDStrip(0.2, 8.45, 13.8, 8.45, 3.23, 0x4488ff);
+
+// Warm accent strips along duct center line
+addLEDStrip(0.2, 7.0, 13.8, 7.0, 3.23, 0xff8844);
+
+scene.add(ledGroup);
+
+// Recessed floor lighting along corridor edges
+var floorLEDGroup = new THREE.Group();
+for (var flx = 0; flx < 14; flx += 0.5) {
+  for (var flz of [5.52, 8.48]) {
+    var flLED = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.3, 0.01),
+      new THREE.MeshStandardMaterial({color:0x4488ff, roughness:0.1, emissive:0x4488ff, emissiveIntensity:0.8})
+    );
+    flLED.rotation.x = -Math.PI/2;
+    flLED.position.set(flx, 0.02, flz);
+    floorLEDGroup.add(flLED);
+  }
+}
+scene.add(floorLEDGroup);
+
+// ====================================================================
+// PRESET VIEWS (快捷键1-7)
+// ====================================================================
+var views = {
+  entrance: {pos:[15.5, 2.0, 10], tgt:[5, 1.5, 7]},       // 进门视角(原始)
+  top:      {pos:[7, 17, 7], tgt:[7, 1.5, 7], hideDuct:true}, // 俯视
+  north:    {pos:[7, 1.4, 5.5], tgt:[7, 1.7, 0.5]},       // 北侧大屏
+  south:    {pos:[7, 1.4, 8.5], tgt:[7, 1.7, 13.5]},      // 南侧大屏
+  west:     {pos:[-4.5, 2.0, 7], tgt:[3.5, 1.5, 7]},      // 西侧双屏
+  corner:   {pos:[3, 1.6, 10.5], tgt:[1.3, 1.5, 12.7]},   // 西南角智慧屏
+  corridor: {pos:[15, 1.8, 7], tgt:[0, 1.5, 7]}            // 过道东→西
+};
+
+window.setView = function(name) {
+  var v = views[name];
+  if (!v) return;
+
+  // Toggle duct: hide for top view, show for all others
+  ceiling.visible = true;
+  ductGroup.visible = !v.hideDuct;
+
+  var sP = camera.position.clone();
+  var sT = controls.target.clone();
+  var eP = new THREE.Vector3(v.pos[0], v.pos[1], v.pos[2]);
+  var eT = new THREE.Vector3(v.tgt[0], v.tgt[1], v.tgt[2]);
+  var dur = 1200, t0 = performance.now();
+
+  function anim(now) {
+    var t = Math.min((now-t0)/dur, 1);
+    var ease = t<0.5 ? 2*t*t : -1+(4-2*t)*t;
+    camera.position.lerpVectors(sP, eP, ease);
+    controls.target.lerpVectors(sT, eT, ease);
+    controls.update();
+    if (t<1) requestAnimationFrame(anim);
+  }
+  requestAnimationFrame(anim);
+
+  document.querySelectorAll('#ui button').forEach(function(b){b.classList.remove('on')});
+  var btn = document.getElementById('b-'+name);
+  if (btn) btn.classList.add('on');
+};
+
+// ====================================================================
+// SCREENSHOT
+// ====================================================================
+window.captureScreenshot = function() {
+  renderer.render(scene, camera);
+  var link = document.createElement('a');
+  link.download = '鲁西电厂集控室_' + new Date().toISOString().slice(0,10) + '.png';
+  link.href = renderer.domElement.toDataURL('image/png');
+  link.click();
+};
+
+// ====================================================================
+// WIREFRAME TOGGLE
+// ====================================================================
+var wireframeMode = false;
+window.toggleWireframe = function() {
+  wireframeMode = !wireframeMode;
+  scene.traverse(function(child) {
+    if (child.isMesh && child.material) {
+      if (Array.isArray(child.material)) {
+        child.material.forEach(function(m) { if (m.wireframe !== undefined) m.wireframe = wireframeMode; });
+      } else {
+        if (child.material.wireframe !== undefined) child.material.wireframe = wireframeMode;
+      }
+    }
+  });
+};
+
+// ====================================================================
+// SCREEN TYPE TOGGLE
+// ====================================================================
+document.querySelectorAll('input[name="st"]').forEach(function(r) {
+  r.addEventListener('change', function(e) {
+    scrType = e.target.value;
+    buildAllScreens(scrType);
+  });
+});
+
+// ====================================================================
+// RENDER LOOP
+// ====================================================================
+function loop() {
+  requestAnimationFrame(loop);
+  controls.update();
+  renderer.render(scene, camera);
+}
+loop();
+
+// ====================================================================
+// RESIZE
+// ====================================================================
+window.addEventListener('resize', function() {
+  camera.aspect = container.clientWidth/container.clientHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(container.clientWidth, container.clientHeight);
+});
+
+// Keyboard
+window.addEventListener('keydown', function(e) {
+  var map = {'1':'entrance','2':'top','3':'north','4':'south','5':'west','6':'corner','7':'corridor'};
+  if (map[e.key]) setView(map[e.key]);
+});
+
+// Auto start
+setTimeout(function() { setView('entrance'); }, 600);
+
+console.log('鲁西电厂集控室 3D效果图 已就绪');
+console.log('快捷键: 1入口 2俯视 3北侧 4南侧 5西侧 6智慧屏 7过道');
+console.log('弧面/平面切换: 左上角单选按钮');
+
+} // end initScene
+</script>
+</body>
+</html>
