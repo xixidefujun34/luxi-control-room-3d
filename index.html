@@ -132,7 +132,7 @@ var M = {
   floor: new THREE.MeshStandardMaterial({color:0x9aacad, roughness:0.35, metalness:0.08}),
   corridor: new THREE.MeshStandardMaterial({color:0xbcc8c8, roughness:0.25, metalness:0.05}),
   wall: new THREE.MeshStandardMaterial({color:0xececec, roughness:0.55, metalness:0.04}),
-  ceiling: new THREE.MeshStandardMaterial({color:0x2a2a35, roughness:0.7, metalness:0.1}),
+  ceiling: new THREE.MeshStandardMaterial({color:0xf0ece6, roughness:0.5, metalness:0.05, side: THREE.DoubleSide}),
   frame: new THREE.MeshStandardMaterial({color:0x1a1a1a, roughness:0.2, metalness:0.85}),
   screenSurf: new THREE.MeshStandardMaterial({color:0x03030f, roughness:0.05, metalness:0.4, emissive:0x000022, emissiveIntensity:0.6}),
   glassWall: new THREE.MeshPhysicalMaterial({color:0xccddff, roughness:0.05, metalness:0.05, transparent:true, opacity:0.22}),
@@ -686,21 +686,21 @@ scene.add(skirting(7, 0.05, 13.98, 0, 14));
 var ductGroup = new THREE.Group();
 
 // Continuous duct: 3m wide (corridor width) × 14m long × 0.25m thick, east-west
-var ductMat = new THREE.MeshStandardMaterial({color:0x5a5a65, roughness:0.35, metalness:0.5});
+var ductMat = new THREE.MeshStandardMaterial({color:0xe8dcc8, roughness:0.3, metalness:0.05, emissive:0xe8dcc8, emissiveIntensity:0.6});
 var duct = new THREE.Mesh(new THREE.BoxGeometry(14, 0.25, 3), ductMat);
 duct.position.set(7, 3.375, 7);
 duct.castShadow = true;
 duct.receiveShadow = true;
 ductGroup.add(duct);
 
-// Duct bottom accent panel (slightly recessed, darker)
-var accentMat = new THREE.MeshStandardMaterial({color:0x3a3a45, roughness:0.3, metalness:0.6});
+// Duct bottom accent panel (recessed)
+var accentMat = new THREE.MeshStandardMaterial({color:0xe8dcc8, roughness:0.3, metalness:0.05, emissive:0xe8dcc8, emissiveIntensity:0.5});
 var accent = new THREE.Mesh(new THREE.BoxGeometry(13.8, 0.02, 2.8), accentMat);
 accent.position.set(7, 3.255, 7);
 ductGroup.add(accent);
 
 // Horizontal seam lines along the duct (east-west grooves)
-var seamMat = new THREE.MeshStandardMaterial({color:0x4a4a55, roughness:0.25, metalness:0.7});
+var seamMat = new THREE.MeshStandardMaterial({color:0xddd0b8, roughness:0.25, metalness:0.05, emissive:0xddd0b8, emissiveIntensity:0.25});
 for (var sx = 1; sx < 14; sx += 2.5) {
   var seam = new THREE.Mesh(new THREE.BoxGeometry(0.015, 0.27, 3.02), seamMat);
   seam.position.set(sx, 3.375, 7);
@@ -715,7 +715,7 @@ for (var sz = 5.6; sz <= 8.4; sz += 0.7) {
 }
 
 // Support brackets at duct sides (every 2m)
-var bracketMat = new THREE.MeshStandardMaterial({color:0x6a6a70, roughness:0.2, metalness:0.8});
+var bracketMat = new THREE.MeshStandardMaterial({color:0xddd0b8, roughness:0.2, metalness:0.05, emissive:0xddd0b8, emissiveIntensity:0.15});
 for (var bx = 1; bx < 14; bx += 2) {
   for (var bz of [5.55, 8.45]) {
     var bracket = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.06, 0.06), bracketMat);
@@ -740,11 +740,11 @@ function addLEDStrip(x1, z1, x2, z2, y, color) {
 }
 
 // Blue LED strips along corridor edges on duct bottom
-addLEDStrip(0.2, 5.55, 13.8, 5.55, 3.23, 0x4488ff);
-addLEDStrip(0.2, 8.45, 13.8, 8.45, 3.23, 0x4488ff);
+addLEDStrip(0.2, 5.55, 13.8, 5.55, 3.23, 0xffeedd);
+addLEDStrip(0.2, 8.45, 13.8, 8.45, 3.23, 0xffeedd);
 
-// Warm accent strips along duct center line
-addLEDStrip(0.2, 7.0, 13.8, 7.0, 3.23, 0xff8844);
+// Accent strips along duct center line
+addLEDStrip(0.2, 7.0, 13.8, 7.0, 3.23, 0xddeeff);
 
 scene.add(ledGroup);
 
@@ -754,7 +754,7 @@ for (var flx = 0; flx < 14; flx += 0.5) {
   for (var flz of [5.52, 8.48]) {
     var flLED = new THREE.Mesh(
       new THREE.PlaneGeometry(0.3, 0.01),
-      new THREE.MeshStandardMaterial({color:0x4488ff, roughness:0.1, emissive:0x4488ff, emissiveIntensity:0.8})
+      new THREE.MeshStandardMaterial({color:0xffeedd, roughness:0.1, emissive:0xffeedd, emissiveIntensity:0.5})
     );
     flLED.rotation.x = -Math.PI/2;
     flLED.position.set(flx, 0.02, flz);
@@ -780,8 +780,8 @@ window.setView = function(name) {
   var v = views[name];
   if (!v) return;
 
-  // Toggle duct: hide for top view, show for all others
-  ceiling.visible = true;
+  // Toggle ceiling & duct: hide for top view, show for all others
+  ceiling.visible = !v.hideDuct;
   ductGroup.visible = !v.hideDuct;
 
   var sP = camera.position.clone();
