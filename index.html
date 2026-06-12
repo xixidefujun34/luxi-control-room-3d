@@ -385,7 +385,7 @@ function buildAllScreens(type) {
   [nScreenGrp, sScreenGrp, wnScreenGrp, wsScreenGrp].forEach(function(grp) {
     while(grp.children.length > 0) grp.remove(grp.children[0]);
   });
-  var SW=8.4, SH=2.025, bY=0.7, WSW=4.2, cR=100;
+  var SW=10.8, SH=2.025, bY=0.895, bYw=0.7, WSW=4.2, cR=100;
 
   // Helper: create cabinet below screen (50cm depth, metallic)
   function addCabinet(parent, w, h, x, z, ry) {
@@ -406,19 +406,19 @@ function buildAllScreens(type) {
   }
 
   if (type==='curved') {
-    var ns=createCurvedScreen(SW,SH,bY,cR,scrThermalMat); ns.position.set(7,0,0.5); nScreenGrp.add(ns);
-    addCabinet(nScreenGrp, SW, bY, 7, 0.3, 0); // 北屏下方柜子
-    var ss=createCurvedScreen(SW,SH,bY,cR,scrWindMat); ss.position.set(7,0,13.5); ss.rotation.y=Math.PI; sScreenGrp.add(ss);
-    addCabinet(sScreenGrp, SW, bY, 7, 13.7, Math.PI); // 南屏下方柜子
-    var wns=createCurvedScreen(WSW,SH,bY,cR,scrVideoMat); wns.position.set(0.06,0,3.8); wns.rotation.y=Math.PI/2; wnScreenGrp.add(wns);
-    var wss=createCurvedScreen(WSW,SH,bY,cR,scrVideoMat); wss.position.set(0.06,0,10.2); wss.rotation.y=Math.PI/2; wsScreenGrp.add(wss);
+    var ns=createCurvedScreen(SW,SH,bY,cR,scrThermalMat); ns.position.set(8.2,0,0.5); nScreenGrp.add(ns);
+    addCabinet(nScreenGrp, SW, bY, 8.2, 0.3, 0); // 北屏下方柜子
+    var ss=createCurvedScreen(SW,SH,bY,cR,scrWindMat); ss.position.set(8.2,0,13.5); ss.rotation.y=Math.PI; sScreenGrp.add(ss);
+    addCabinet(sScreenGrp, SW, bY, 8.2, 13.7, Math.PI); // 南屏下方柜子
+    var wns=createCurvedScreen(WSW,SH,bYw,cR,scrVideoMat); wns.position.set(0.06,0,3.8); wns.rotation.y=Math.PI/2; wnScreenGrp.add(wns);
+    var wss=createCurvedScreen(WSW,SH,bYw,cR,scrVideoMat); wss.position.set(0.06,0,10.2); wss.rotation.y=Math.PI/2; wsScreenGrp.add(wss);
   } else {
-    var fns=createFlatScreen(SW,SH,bY,scrFlatLarge); fns.position.set(7,0,0.5); nScreenGrp.add(fns);
-    addCabinet(nScreenGrp, SW, bY, 7, 0.3, 0);
-    var fss=createFlatScreen(SW,SH,bY,scrFlatLarge); fss.position.set(7,0,13.5); fss.rotation.y=Math.PI; sScreenGrp.add(fss);
-    addCabinet(sScreenGrp, SW, bY, 7, 13.7, Math.PI);
-    var fwns=createFlatScreen(WSW,SH,bY,scrFlatSmall); fwns.position.set(0.06,0,3.8); fwns.rotation.y=Math.PI/2; wnScreenGrp.add(fwns);
-    var fwss=createFlatScreen(WSW,SH,bY,scrFlatSmall); fwss.position.set(0.06,0,10.2); fwss.rotation.y=Math.PI/2; wsScreenGrp.add(fwss);
+    var fns=createFlatScreen(SW,SH,bY,scrFlatLarge); fns.position.set(8.2,0,0.5); nScreenGrp.add(fns);
+    addCabinet(nScreenGrp, SW, bY, 8.2, 0.3, 0);
+    var fss=createFlatScreen(SW,SH,bY,scrFlatLarge); fss.position.set(8.2,0,13.5); fss.rotation.y=Math.PI; sScreenGrp.add(fss);
+    addCabinet(sScreenGrp, SW, bY, 8.2, 13.7, Math.PI);
+    var fwns=createFlatScreen(WSW,SH,bYw,scrFlatSmall); fwns.position.set(0.06,0,3.8); fwns.rotation.y=Math.PI/2; wnScreenGrp.add(fwns);
+    var fwss=createFlatScreen(WSW,SH,bYw,scrFlatSmall); fwss.position.set(0.06,0,10.2); fwss.rotation.y=Math.PI/2; wsScreenGrp.add(fwss);
   }
 }
 buildAllScreens('curved');
@@ -427,7 +427,7 @@ buildAllScreens('curved');
 function statusLight(x,y,z){var l=new THREE.Mesh(new THREE.SphereGeometry(0.035,8,8),
   new THREE.MeshStandardMaterial({color:0x00ff88,roughness:0.1,emissive:0x00ff88,emissiveIntensity:2}));
   l.position.set(x,y,z); return l;}
-nScreenGrp.add(statusLight(7,2.85,0.54)); sScreenGrp.add(statusLight(7,2.85,13.46));
+nScreenGrp.add(statusLight(8.2,2.97,0.54)); sScreenGrp.add(statusLight(8.2,2.97,13.46));
 
 // ====================================================================
 // HUAWEI IDEAHUB PRO 86 (西北角+西南角各1台)
@@ -490,36 +490,34 @@ scene.add(makePillar(7, 8.5));
 // ====================================================================
 function makeStation() {
   var g = new THREE.Group();
-  addBox(g, 1.15, 0.035, 0.72, M.desk, 0, 0.75, 0);
-  addBox(g, 0.035, 0.73, 0.035, M.steel, 0.5, 0.37, 0.3);
-  addBox(g, 0.035, 0.73, 0.035, M.steel, -0.5, 0.37, 0.3);
-  addBox(g, 0.035, 0.73, 0.035, M.steel, 0.5, 0.37, -0.3);
-  addBox(g, 0.035, 0.73, 0.035, M.steel, -0.5, 0.37, -0.3);
+  addBox(g, 1.0, 0.035, 0.72, M.desk, 0, 0.75, 0);
+  addBox(g, 0.035, 0.73, 0.035, M.steel, 0.44, 0.37, 0.3);
+  addBox(g, 0.035, 0.73, 0.035, M.steel, -0.44, 0.37, 0.3);
+  addBox(g, 0.035, 0.73, 0.035, M.steel, 0.44, 0.37, -0.3);
+  addBox(g, 0.035, 0.73, 0.035, M.steel, -0.44, 0.37, -0.3);
   var monMat = new THREE.MeshStandardMaterial({color:0x0a0a20, roughness:0.15, emissive:0x000015, emissiveIntensity:0.4});
-  addBox(g, 0.45, 0.28, 0.035, monMat, 0.24, 0.95, 0.28);
-  addBox(g, 0.45, 0.28, 0.035, monMat, -0.24, 0.95, 0.28);
-  addMesh(g, new THREE.CylinderGeometry(0.018, 0.018, 0.13, 6), M.steel, 0.24, 0.82, 0.28);
-  addMesh(g, new THREE.CylinderGeometry(0.018, 0.018, 0.13, 6), M.steel, -0.24, 0.82, 0.28);
+  addBox(g, 0.55, 0.32, 0.035, monMat, 0, 0.95, 0.28);
+  addMesh(g, new THREE.CylinderGeometry(0.018, 0.018, 0.13, 6), M.steel, 0, 0.82, 0.28);
   addMesh(g, new THREE.CylinderGeometry(0.22, 0.24, 0.05, 20), M.chair, 0, 0.47, -0.24);
   addBox(g, 0.38, 0.42, 0.04, M.chair, 0, 0.72, -0.35);
   addMesh(g, new THREE.CylinderGeometry(0.028, 0.028, 0.32, 8), M.steel, 0, 0.54, -0.24);
   return g;
 }
 
-// 北侧坐席 — 4位居中, 放到北立柱内侧(立柱北边)
+// 北侧坐席 — 8位居中, 放到北立柱内侧(立柱北边)
 var nRow = new THREE.Group();
-var nX = [5.275, 6.425, 7.575, 8.725]; // 4位连排, 东西居中X=7
+var nX = [4.7, 5.7, 6.7, 7.7, 8.7, 9.7, 10.7, 11.7]; // 8位连排, 1m/位共8m, 与大屏中心对齐X=8.2
 nX.forEach(function(sx){ var st=makeStation(); st.position.set(sx,0,4.2); st.rotation.y=Math.PI; nRow.add(st); });
 scene.add(nRow);
-// 南侧坐席 — 4位连排, 东西居中, 放到南立柱内侧(立柱南边)
+// 南侧坐席 — 8位连排, 东西居中, 放到南立柱内侧(立柱南边)
 var sRow = new THREE.Group();
 nX.forEach(function(sx){ var st=makeStation(); st.position.set(sx,0,9.8); sRow.add(st); });
 scene.add(sRow);
 
 // ====================================================================
-// REST AREAS (靠东墙X=14, 南北各一个休息区)
+// REST AREAS (commented out)
 // ====================================================================
-function makeSofa(len) {
+/* function makeSofa(len) {
   var g = new THREE.Group();
   var seatW = len || 2.0, seatH = 0.38, seatD = 0.78;
   var fabric = new THREE.MeshStandardMaterial({color:0x4a4a58, roughness:0.7, metalness:0.03});
@@ -609,7 +607,7 @@ var ssTable = makeCoffeeTable();
 ssTable.position.set(12.9, 0, 12.0); ssTable.rotation.y = Math.PI/2;
 southRest.add(ssTable);
 southRest.add(makeSideTable(12.6, 13.0));
-scene.add(southRest);
+scene.add(southRest); */
 
 // ====================================================================
 // DIRECTION LABELS (方位标注)
@@ -769,8 +767,8 @@ scene.add(floorLEDGroup);
 var views = {
   entrance: {pos:[15.5, 2.0, 10], tgt:[5, 1.5, 7]},       // 进门视角(原始)
   top:      {pos:[7, 17, 7], tgt:[7, 1.5, 7], hideDuct:true}, // 俯视
-  north:    {pos:[7, 1.4, 5.5], tgt:[7, 1.7, 0.5]},       // 北侧大屏
-  south:    {pos:[7, 1.4, 8.5], tgt:[7, 1.7, 13.5]},      // 南侧大屏
+  north:    {pos:[8.2, 1.9, 5.5], tgt:[8.2, 1.9, 0.5]},       // 北侧大屏
+  south:    {pos:[8.2, 1.9, 8.5], tgt:[8.2, 1.9, 13.5]},      // 南侧大屏
   west:     {pos:[8, 1.6, 7], tgt:[0.5, 1.5, 7]},           // 西侧双屏视角
   corner:   {pos:[3, 1.6, 10.5], tgt:[1.3, 1.5, 12.7]},   // 西南角智慧屏
   corridor: {pos:[15, 1.8, 7], tgt:[0, 1.5, 7]}            // 过道东→西
