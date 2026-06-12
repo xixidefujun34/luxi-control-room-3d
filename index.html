@@ -415,17 +415,17 @@ function buildAllScreens(type) {
   }
 
   if (type==='curved') {
-    var ns=createCurvedScreen(SW,SH,bY,cR,scrThermalMat); ns.position.set(8.2,0,0.5); nScreenGrp.add(ns);
-    addCabinet(nScreenGrp, SW, bY, 8.2, 0.3, 0); // 北屏下方柜子
-    var ss=createCurvedScreen(SW,SH,bY,cR,scrWindMat); ss.position.set(8.2,0,13.5); ss.rotation.y=Math.PI; sScreenGrp.add(ss);
-    addCabinet(sScreenGrp, SW, bY, 8.2, 13.7, Math.PI); // 南屏下方柜子
+    var ns=createCurvedScreen(SW,SH,bY,cR,scrThermalMat); ns.position.set(5.7,0,0.5); nScreenGrp.add(ns);
+    addCabinet(nScreenGrp, SW, bY, 5.7, 0.3, 0); // 北屏下方柜子
+    var ss=createCurvedScreen(SW,SH,bY,cR,scrWindMat); ss.position.set(5.7,0,13.5); ss.rotation.y=Math.PI; sScreenGrp.add(ss);
+    addCabinet(sScreenGrp, SW, bY, 5.7, 13.7, Math.PI); // 南屏下方柜子
     var wns=createCurvedScreen(WSW,SH,bYw,cR,scrVideoMat); wns.position.set(0.06,0,3.8); wns.rotation.y=Math.PI/2; wnScreenGrp.add(wns);
     var wss=createCurvedScreen(WSW,SH,bYw,cR,scrVideoMat); wss.position.set(0.06,0,10.2); wss.rotation.y=Math.PI/2; wsScreenGrp.add(wss);
   } else {
-    var fns=createFlatScreen(SW,SH,bY,scrFlatLarge); fns.position.set(8.2,0,0.5); nScreenGrp.add(fns);
-    addCabinet(nScreenGrp, SW, bY, 8.2, 0.3, 0);
-    var fss=createFlatScreen(SW,SH,bY,scrFlatLarge); fss.position.set(8.2,0,13.5); fss.rotation.y=Math.PI; sScreenGrp.add(fss);
-    addCabinet(sScreenGrp, SW, bY, 8.2, 13.7, Math.PI);
+    var fns=createFlatScreen(SW,SH,bY,scrFlatLarge); fns.position.set(5.7,0,0.5); nScreenGrp.add(fns);
+    addCabinet(nScreenGrp, SW, bY, 5.7, 0.3, 0);
+    var fss=createFlatScreen(SW,SH,bY,scrFlatLarge); fss.position.set(5.7,0,13.5); fss.rotation.y=Math.PI; sScreenGrp.add(fss);
+    addCabinet(sScreenGrp, SW, bY, 5.7, 13.7, Math.PI);
     var fwns=createFlatScreen(WSW,SH,bYw,scrFlatSmall); fwns.position.set(0.06,0,3.8); fwns.rotation.y=Math.PI/2; wnScreenGrp.add(fwns);
     var fwss=createFlatScreen(WSW,SH,bYw,scrFlatSmall); fwss.position.set(0.06,0,10.2); fwss.rotation.y=Math.PI/2; wsScreenGrp.add(fwss);
   }
@@ -436,10 +436,10 @@ buildAllScreens('curved');
 function statusLight(x,y,z){var l=new THREE.Mesh(new THREE.SphereGeometry(0.035,8,8),
   new THREE.MeshStandardMaterial({color:0x00ff88,roughness:0.1,emissive:0x00ff88,emissiveIntensity:2}));
   l.position.set(x,y,z); return l;}
-nScreenGrp.add(statusLight(8.2,2.97,0.54)); sScreenGrp.add(statusLight(8.2,2.97,13.46));
+nScreenGrp.add(statusLight(5.7,2.97,0.54)); sScreenGrp.add(statusLight(5.7,2.97,13.46));
 
 // ====================================================================
-// HUAWEI IDEAHUB PRO 86 (西北角+西南角各1台)
+// HUAWEI IDEAHUB PRO 86 (东北角+东南角各1台)
 // ====================================================================
 function makeIdeaHub(x, z, ry) {
   var g = new THREE.Group();
@@ -469,8 +469,8 @@ function makeIdeaHub(x, z, ry) {
     0, scrBottom+scrH+0.03, 0.03);
   g.position.set(x,0,z); g.rotation.y=ry; return g;
 }
-scene.add(makeIdeaHub(1.2, 1.2, Math.PI/4)); // 西北角
-scene.add(makeIdeaHub(1.2, 12.8, 3*Math.PI/4)); // 西南角
+scene.add(makeIdeaHub(12.8, 1.2, 7*Math.PI/4)); // 东北角
+scene.add(makeIdeaHub(12.8, 12.8, 5*Math.PI/4)); // 东南角
 
 // ====================================================================
 // 支撑柱 (50cm×50cm, 过道两侧X=7处)
@@ -515,7 +515,7 @@ function makeStation() {
 
 // 北侧坐席 — 8位居中, 放到北立柱内侧(立柱北边)
 var nRow = new THREE.Group();
-var nX = [4.7, 5.7, 6.7, 7.7, 8.7, 9.7, 10.7, 11.7]; // 8位连排, 1m/位共8m, 与大屏中心对齐X=8.2
+var nX = [2.2, 3.2, 4.2, 5.2, 6.2, 7.2, 8.2, 9.2]; // 8位连排, 1m/位共8m, 与大屏中心对齐X=5.7
 nX.forEach(function(sx){ var st=makeStation(); st.position.set(sx,0,4.2); st.rotation.y=Math.PI; nRow.add(st); });
 scene.add(nRow);
 // 南侧坐席 — 8位连排, 东西居中, 放到南立柱内侧(立柱南边)
@@ -776,10 +776,10 @@ scene.add(floorLEDGroup);
 var views = {
   entrance: {pos:[17, 2.0, 10], tgt:[5, 1.5, 7]},       // 进门视角(东侧)
   top:      {pos:[7, 17, 7], tgt:[7, 1.5, 7], hideDuct:true}, // 俯视
-  north:    {pos:[8.2, 1.9, 6.15], tgt:[8.2, 1.9, 0.5]},       // 北侧大屏
-  south:    {pos:[8.2, 1.9, 7.85], tgt:[8.2, 1.9, 13.5]},      // 南侧大屏
+  north:    {pos:[5.7, 1.9, 6.15], tgt:[5.7, 1.9, 0.5]},       // 北侧大屏
+  south:    {pos:[5.7, 1.9, 7.85], tgt:[5.7, 1.9, 13.5]},      // 南侧大屏
   west:     {pos:[8, 1.6, 7], tgt:[0.5, 1.5, 7]},           // 西侧双屏视角
-  corner:   {pos:[3, 1.6, 10.5], tgt:[1.3, 1.5, 12.7]},   // 西南角智慧屏
+  corner:   {pos:[11, 1.6, 10.5], tgt:[12.7, 1.5, 12.7]},   // 东南角智慧屏
   corridor: {pos:[15, 1.8, 7], tgt:[0, 1.5, 7]}            // 过道东→西
 };
 
